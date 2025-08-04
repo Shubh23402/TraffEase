@@ -91,7 +91,7 @@ while True:
                 totalCount1.append(Id)
                 cv2.line(img, (limits1[0], limits1[1]), (limits1[2], limits1[3]), (0, 255, 0), 5)
 
-        if limits2[0] < cx < limits2[2] and limits2[1]-15 < cy < limits2[3]+15:
+        if limits2[0] < cx < limits2[2] and limits2[1]-15 < cy < limits2[3]+10:
             if totalCount2.count(Id) == 0:
                 totalCount2.append(Id)
                 cv2.line(img, (limits2[0], limits2[1]), (limits2[2], limits2[3]), (0, 255, 0), 5)
