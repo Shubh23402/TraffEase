@@ -5,7 +5,7 @@ from ultralytics import YOLO
 from sort import *
 
 # Connect to Arduino
-arduino = serial.Serial('COM3', 9600, timeout=1)   # change COM port if needed
+arduino = serial.Serial('COM3', 9600, timeout=1)
 
 model = YOLO("../Yolo-Weights/yolov8n.pt")
 cap = cv2.VideoCapture("LaneTraffic.mp4")
@@ -34,18 +34,18 @@ while True:
         break
     imgRegion = cv2.bitwise_and(img, mask)
 
-    # ---- Read Arduino light status ----
-    if arduino.in_waiting and not ambulance_override:   # skip Arduino messages during override
+    # Read Arduino light status
+    if arduino.in_waiting and not ambulance_override:
         msg = arduino.readline().decode().strip()
         if msg.startswith("ACTIVE:"):
-            activeGreen = msg.split(":")[1]  # "NS" or "EW"
+            activeGreen = msg.split(":")[1]
             # Reset counts for green lanes
             if activeGreen == "NS":
                 totalCountN_S = []
             elif activeGreen == "EW":
                 totalCountE, totalCountW = [], []
 
-    # ---- Detection ----
+    # Detection
     results = model(imgRegion, stream=True)
     detections = np.empty((0, 5))
 
@@ -61,12 +61,12 @@ while True:
 
     resultsTracker = tracker.update(detections)
 
-    # ---- Default line colors (RED by default) ----
+    # Default line colors (RED)
     line_color_NS = (0, 0, 255)
     line_color_E  = (0, 0, 255)
     line_color_W  = (0, 0, 255)
 
-    # ---- Counting & Drawing ----
+    # Counting & Drawing boxes
     ambulance_detected = False
 
     for x1, y1, x2, y2, Id in resultsTracker:
@@ -78,7 +78,6 @@ while True:
         cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cvzone.putTextRect(img, f'ID {int(Id)}', (x1, y1 - 10), scale=0.8, thickness=2)
 
-        # Identify object class again
         label = "vehicle"
         for r in results:
             for box in r.boxes:
@@ -89,7 +88,7 @@ while True:
 
         cvzone.putTextRect(img, label, (x1, y2 + 20), scale=0.7, thickness=1, colorR=(0, 0, 255))
 
-        # ---- Ambulance Priority ----
+        # Ambulance Priority
         if label == "ambulance":
             ambulance_detected = True
             # Detect lane of ambulance
@@ -100,15 +99,15 @@ while True:
             elif limitsW[0] < cx < limitsW[2]:
                 ambulance_lane = "W"
 
-        # ---- Normal Vehicle Counting ----
+        # Normal Vehicle Counting
         if not ambulance_override:
-            if activeGreen != "NS":   # NS is RED
+            if activeGreen != "NS":
                 if limitsN_S[0] < cx < limitsN_S[2] and limitsN_S[1]-15 < cy < limitsN_S[3]+15:
-                    line_color_NS = (0, 255, 0)  # Green when vehicle detected
+                    line_color_NS = (0, 255, 0)
                     if Id not in totalCountN_S:
                         totalCountN_S.append(Id)
 
-            if activeGreen != "EW":   # EW is RED
+            if activeGreen != "EW":
                 if limitsE[0] < cx < limitsE[2] and limitsE[1]-15 < cy < limitsE[3]+15:
                     line_color_E = (0, 255, 0)
                     if Id not in totalCountE:
@@ -119,7 +118,7 @@ while True:
                     if Id not in totalCountW:
                         totalCountW.append(Id)
 
-    # ---- Ambulance Override Mode ----
+    # Ambulance Override Mode
     if ambulance_detected:
         ambulance_override = True
         if ambulance_lane:
@@ -129,17 +128,17 @@ while True:
 
     else:
         ambulance_override = False
-        # ---- Normal Mode: Send counts ----
+        # Normal Mode: Send counts
         data = f"N:{len(totalCountN_S)} S:{len(totalCountN_S)} E:{len(totalCountE)} W:{len(totalCountW)}\n"
         arduino.write(data.encode())
         print("Sent:", data.strip())
 
-    # ---- Draw Counting Lines ----
+    # Draw Lines on road
     cv2.line(img, (limitsN_S[0], limitsN_S[1]), (limitsN_S[2], limitsN_S[3]), line_color_NS, 3)
     cv2.line(img, (limitsE[0], limitsE[1]), (limitsE[2], limitsE[3]), line_color_E, 3)
     cv2.line(img, (limitsW[0], limitsW[1]), (limitsW[2], limitsW[3]), line_color_W, 3)
 
-    # ---- Display ----
+    # Display count
     cvzone.putTextRect(img, f'N/S Count: {len(totalCountN_S)}', (50, 50))
     cvzone.putTextRect(img, f'E Count: {len(totalCountE)}', (50, 100))
     cvzone.putTextRect(img, f'W Count: {len(totalCountW)}', (50, 150))
