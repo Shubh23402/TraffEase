@@ -144,7 +144,7 @@ while True:
     cvzone.putTextRect(img, f'W Count: {len(totalCountW)}', (50, 150))
 
     if ambulance_override and ambulance_lane:
-        cvzone.putTextRect(img, f'🚨 Ambulance Detected! Priority to {ambulance_lane}', (300, 50),
+        cvzone.putTextRect(img, f' Ambulance Detected! Priority to {ambulance_lane}', (300, 50),
                            scale=1, thickness=2, colorR=(0, 0, 255))
 
     cv2.imshow("Traffic", img)
